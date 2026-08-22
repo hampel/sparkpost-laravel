@@ -22,7 +22,7 @@ release of a package that non-Laravel consumers depend on.
 
 ```bash
 composer install
-composer check                                  # lint, analyse, test - what CI runs
+composer check                                  # lint, analyse, test - most of what CI runs
 composer lint / format / analyse / test         # the same steps individually
 vendor/bin/phpunit --filter test_name           # one test (methods are snake_case)
 
@@ -34,6 +34,10 @@ composer update --with="illuminate/support:^13.0" --with="illuminate/mail:^13.0"
 ```
 
 PHPStan runs at **level 10** with **larastan**, over `src` and `tests`.
+
+**`composer check` is not the whole of CI.** Two jobs have no local equivalent in that script:
+`composer validate --strict` in the lint job, and the `dependencies` job described under
+*Version support*. Run both by hand before proposing a release.
 
 **Testbench majors track Laravel majors** — Testbench 10 is Laravel 12, Testbench 11 is Laravel 13 —
 so the CI matrix pins both together. Letting Composer choose Testbench would quietly test a
@@ -58,7 +62,9 @@ its existing `services.sparkpost` block, and an application running two SparkPos
 different accounts can put the difference on the mailer.
 
 `secret` is the API key, matching what Laravel's own service blocks call it. `key` is accepted too,
-because it is the obvious guess.
+because it is the obvious guess. `region` is the only other key read — it selects the tenancy
+through `Config::forRegion()`, and an empty string counts as unset, which is what lets a mailer
+override an EU `services.sparkpost` back to the default endpoint.
 
 **There is no configuration file to publish.** A Laravel application already has `config/mail.php`
 and `config/services.php`; a third file holding the same keys is one more place for them to
@@ -90,6 +96,29 @@ fixes and 24 of security fixes, which is narrower than instinct suggests — che
 validates that against a range baked into the release, so naming a PHP version newer than the tool
 knows about is a configuration error, not a degraded analysis. `max: 80500` needs `^2.1.22`.
 
+### An undeclared dependency is invisible to a normal PHPStan run
+
+The `dependencies` CI job installs `--no-dev` and analyses `src` alone, with PHPStan pulled in from
+outside the package and `-c .github/phpstan-nodev.neon`. Anything `src` touches that is not in
+`require` then comes back as not-found.
+
+Nothing else catches this. An ordinary run has Testbench installed, which drags in the whole
+framework, so every Illuminate class in existence resolves and a missing `require` looks fine. That
+job is the reason `guzzlehttp/guzzle` is declared here rather than leant on via `laravel/framework`.
+
+Reproduce it locally in a throwaway clone — it deletes `vendor/` as it goes:
+
+```bash
+composer install --no-dev
+mkdir -p /tmp/phpstan && composer -d /tmp/phpstan require phpstan/phpstan
+/tmp/phpstan/vendor/bin/phpstan analyse -c .github/phpstan-nodev.neon \
+  --autoload-file=vendor/autoload.php
+```
+
+The separate config is not optional: the package's own `phpstan.neon` points at `tests/` and
+includes larastan, neither of which survives `--no-dev`, so discovering it turns the run into a
+configuration error while you are trying to read it as a dependency result.
+
 ## Tests
 
 Orchestra Testbench boots a minimal Laravel application from inside the suite, so the Laravel
@@ -98,9 +127,23 @@ install a framework to test this package.**
 
 `TestCase` sets the two config keys a real application would carry. The tests then resolve
 `Mail::mailer('sparkpost')` and assert on the transport that comes back, which is the same path an
-application takes.
+application takes. Most assertions read the transport's string form
+(`sparkpost+api://api.sparkpost.com`) because it holds its collaborators privately — that DSN is the
+only configuration visible from outside.
+
+`phpunit.xml` fails on risky, warning, **deprecation** and notice. A deprecation from a new Laravel
+or PHPUnit is a red suite here, not a note in the output — that is deliberate, so don't reach for
+the failOn* switches to get green.
 
 ## Releases
 
-`CHANGELOG.md` is hand-maintained, newest first, `x.y.z (YYYY-MM-DD)` heading with bullet points, and
-is updated in its own commit before tagging. Simon does his own pushes and tagging.
+`CHANGELOG.md` is hand-maintained, newest first, and updated in its own commit before tagging. It
+uses **setext headings** — a title underlined with `=`, then `x.y.z (YYYY-MM-DD)` underlined with
+`-`, with `*` bullets under each. Work in progress accumulates under `Unreleased`, which is renamed
+at release. Simon does his own pushes and tagging.
+
+**A new dev-only file at the repo root needs an `export-ignore` line in `.gitattributes`**, which is
+what keeps it out of the Packagist dist archive. `CLAUDE.md` is on that list already.
+
+`composer.lock` is gitignored — this is a library, so every consumer and every CI job resolves
+fresh. It exists locally, but nothing about it is shared.
