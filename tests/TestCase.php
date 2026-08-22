@@ -25,6 +25,19 @@ abstract class TestCase extends BaseTestCase
         return [SparkPostServiceProvider::class];
     }
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Laravel's HandleExceptions bootstrapper replaces PHPUnit's error handler when the
+        // app boots, and shouldIgnoreDeprecationErrors() discards deprecations outright
+        // while running tests - so phpunit.xml's failOnDeprecation never sees one and is
+        // inert in any Testbench-based package. This throws on them instead, which is the
+        // whole point of the flag: a library should hear about a deprecation before its
+        // users do.
+        $this->withoutDeprecationHandling();
+    }
+
     /**
      * The two files a real application would carry: the mailer, and the credentials.
      */
