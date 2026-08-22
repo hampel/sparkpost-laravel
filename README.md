@@ -45,6 +45,45 @@ And the credentials to `config/services.php`:
 Then set `MAIL_MAILER=sparkpost`. Anything set on the mailer in `config/mail.php` overrides
 `services.sparkpost`, so two mailers can run against different SparkPost accounts.
 
+## Transmission options
+
+`options` is applied to every message the mailer sends:
+
+```php
+'sparkpost' => [
+    'secret' => env('SPARKPOST_SECRET'),
+    'options' => [
+        'open_tracking' => false,
+        'click_tracking' => false,
+        'transactional' => true,
+    ],
+],
+```
+
+**Leaving these unset is not the same as setting them false.** SparkPost applies the
+account default instead, so an application that wants click tracking off has to say so —
+otherwise every link in every email is rewritten through SparkPost's domain. Likewise
+`transactional`: mail that is not marked transactional is filtered against the
+non-transactional suppression list, so someone who unsubscribed from a newsletter stops
+receiving password resets.
+
+Options can go on the mailer instead, which is how two mailers send with different
+tracking against one account:
+
+```php
+'mailers' => [
+    'sparkpost' => ['transport' => 'sparkpost'],
+    'sparkpost-bulk' => [
+        'transport' => 'sparkpost',
+        'options' => ['transactional' => false, 'ip_pool' => 'bulk'],
+    ],
+],
+```
+
+The mailer's array **replaces** the one in `services.sparkpost` rather than merging into
+it, the same as every other key — so repeat any option you still want. Anything a message
+sets for itself wins over both.
+
 ## What you get from the transport
 
 Everything in

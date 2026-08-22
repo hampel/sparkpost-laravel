@@ -8,6 +8,7 @@ use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Psr7\HttpFactory;
 use Hampel\SparkPost\Config;
 use Hampel\SparkPost\SparkPost;
+use Hampel\SparkPost\Transport\EmailConverter;
 use Hampel\SparkPost\Transport\SparkPostTransport;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Container\Container;
@@ -46,7 +47,38 @@ final class SparkPostTransportFactory
         // The app's logger, so the warning the transport raises when SparkPost accepts some
         // recipients and rejects others lands somewhere a person will see it. Without this
         // a partial rejection succeeds silently.
-        return new SparkPostTransport($sparkpost, null, $this->logger());
+        return new SparkPostTransport(
+            $sparkpost,
+            null,
+            $this->logger(),
+            new EmailConverter($this->options($config)),
+        );
+    }
+
+    /**
+     * Transmission options applied to every message - `open_tracking`, `click_tracking`,
+     * `transactional`, `ip_pool`. Anything the message itself carries still wins.
+     *
+     * These matter more than a defaults array usually does: leaving them unset does not mean
+     * "off", it means whatever the SparkPost account defaults to. An application that has
+     * click tracking disabled in config and no equivalent here silently starts rewriting
+     * every link in every email through SparkPost's domain.
+     *
+     * @param  array<string, mixed>  $config  the already-merged configuration
+     * @return array<string, mixed>
+     */
+    private function options(array $config): array
+    {
+        $options = $config['options'] ?? [];
+
+        if (! is_array($options)) {
+            throw new InvalidArgumentException(
+                'SparkPost "options" must be an array of transmission options, '.get_debug_type($options).' given.'
+            );
+        }
+
+        /** @var array<string, mixed> $options */
+        return $options;
     }
 
     /**

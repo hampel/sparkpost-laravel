@@ -62,9 +62,21 @@ its existing `services.sparkpost` block, and an application running two SparkPos
 different accounts can put the difference on the mailer.
 
 `secret` is the API key, matching what Laravel's own service blocks call it. `key` is accepted too,
-because it is the obvious guess. `region` is the only other key read — it selects the tenancy
-through `Config::forRegion()`, and an empty string counts as unset, which is what lets a mailer
-override an EU `services.sparkpost` back to the default endpoint.
+because it is the obvious guess. `region` selects the tenancy through `Config::forRegion()`, and an
+empty string counts as unset, which is what lets a mailer override an EU `services.sparkpost` back
+to the default endpoint.
+
+`options` is the third key, and it is the one with teeth. It becomes the `EmailConverter`'s default
+transmission options, applied to every message including a plain `Email` — which is the case that
+matters, because Laravel's mailer never builds a `SparkPostEmail`. **An unset option is not a
+disabled one**: SparkPost falls back to the account default, so a driver that ignores `options`
+turns click tracking on and stops marking mail transactional, silently. That is the whole reason
+this key exists — applications migrating from `vemcogroup/laravel-sparkpost-driver` carry it, and
+dropping it would change how they send without an error or a log line.
+
+Because `resolveConfig()` is a **shallow** merge, a mailer-level `options` array replaces the
+`services` one wholesale rather than merging key by key. That is consistent with every other key,
+and `DefaultOptionsTest` pins it so nobody has to guess.
 
 **There is no configuration file to publish.** A Laravel application already has `config/mail.php`
 and `config/services.php`; a third file holding the same keys is one more place for them to
