@@ -84,6 +84,32 @@ The mailer's array **replaces** the one in `services.sparkpost` rather than merg
 it, the same as every other key — so repeat any option you still want. Anything a message
 sets for itself wins over both.
 
+## The bounce address
+
+`return_path` is Laravel's own setting, not one this package adds. Set it in
+`config/mail.php` and it applies to every message the application sends:
+
+```php
+'return_path' => [
+    'address' => env('MAIL_RETURN_PATH'),
+],
+```
+
+Laravel applies it in `Mailer::createMessage()`, so it covers Mailables, `Mail::raw()`,
+notifications and queued mail alike. Setting `return_path` on a mailer in `mail.mailers`
+overrides the global value for that mailer.
+
+Two things to know:
+
+- **It is sent only when it differs from the From address.** Symfony falls back to the From
+  when no return path is set, and sending that as the bounce address would move bounces off
+  SparkPost's own bounce domain.
+- **The domain must be a verified bounce domain on the SparkPost account.** SparkPost accepts
+  a transmission naming an unverified one and does not deliver it.
+
+Sending every message from one address on one domain, and using `Reply-To` where replies
+belong elsewhere, keeps SPF and DKIM aligned with that domain.
+
 ## What you get from the transport
 
 Everything in

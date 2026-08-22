@@ -104,21 +104,25 @@ pass. Keep `phpVersion` in `phpstan.neon` in step with the `php` constraint in `
 `illuminate/*` spans **only currently supported Laravel majors**. Laravel gives 18 months of bug
 fixes and 24 of security fixes, which is narrower than instinct suggests — check before widening.
 
-### `hampel/sparkpost-transport` is at `^0.2.0`, and the caret does not mean what it usually does
+### `hampel/sparkpost-transport` is at `^0.3.0`, and the caret does not mean what it usually does
 
 Below 1.0 Composer treats `^` as `~`: **`^0.1.0` resolves `>=0.1.0 <0.2.0`**, so it excludes 0.2.0
 rather than accepting it. Every 0.x minor of the transport is a breaking boundary as far as this
 constraint is concerned.
 
 The practical consequence is that picking up a new transport feature means **replacing** the
-constraint, not adding to it. `^0.1.0` became `^0.2.0` for the transmission options work — the
-`EmailConverter` constructor it needs does not exist in 0.1.x at all, so `^0.1.0|^0.2.0` would have
-meant branching on whether a constructor argument exists. Keep the union form only if there is a
-real reason to support the older line.
+constraint, not adding to it. It has happened twice: `^0.1.0` became `^0.2.0` for the transmission
+options work, and `^0.2.0` became `^0.3.0` so the bounce address reaches SparkPost. Keep the union
+form only if there is a real reason to support the older line.
 
 Because the floor and the feature are the same release here, `--prefer-lowest` is the check that
 matters after a bump: it resolves the transport to exactly the floor, so a constraint that is a
 minor too low fails there rather than in an application months later.
+
+**A transport release can change what this package sends without a line changing here.** 0.3.0
+began sending the envelope sender as the transmission `return_path`, which turned Laravel's
+existing `mail.return_path` setting from inert into effective. Read the transport's CHANGELOG on
+every bump and ask what an application would notice, not only whether the suite still passes.
 
 **`phpstan/phpstan` must be a version that accepts the `phpVersion.max` in `phpstan.neon`.** It
 validates that against a range baked into the release, so naming a PHP version newer than the tool

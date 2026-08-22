@@ -8,5 +8,6 @@ Unreleased
   config/services.php, and the application's PSR-18 client and logger where they are bound
 * `options` in config/services.php or on the mailer sets transmission options - tracking,
   transactional, ip_pool - for every message the mailer sends
-* requires hampel/sparkpost-transport ^0.2.0, and illuminate/mail and illuminate/support at
+* the bounce address is Laravel's `mail.return_path`, sent as the transmission return_path
+* requires hampel/sparkpost-transport ^0.3.0, and illuminate/mail and illuminate/support at
   ^12.0|^13.0
