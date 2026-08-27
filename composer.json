@@ -24,9 +24,15 @@
     "require": {
         "php": ">=8.3",
         "guzzlehttp/guzzle": "^7.8|^8.0",
-        "hampel/sparkpost-transport": "^0.3.0",
+        "guzzlehttp/psr7": "^2.0|^3.0",
+        "hampel/sparkpost": "^0.3.0",
+        "hampel/sparkpost-transport": "^0.4.0",
+        "illuminate/contracts": "^12.0|^13.0",
         "illuminate/mail": "^12.0|^13.0",
-        "illuminate/support": "^12.0|^13.0"
+        "illuminate/support": "^12.0|^13.0",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.0",
+        "psr/log": "^1.0|^2.0|^3.0"
     },
     "require-dev": {
         "larastan/larastan": "^3.0",

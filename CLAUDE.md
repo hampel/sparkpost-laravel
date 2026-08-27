@@ -88,7 +88,13 @@ Laravel binds none of the PSR-18 or PSR-17 interfaces by default. The factory ch
 so an application that has configured its own client gets it, and constructs Guzzle only when
 nothing is bound. Guzzle is therefore a real `require` here — `laravel/framework` happens to depend
 on it, but this package requires `illuminate/*` rather than the framework, so relying on that would
-be an undeclared dependency.
+be an undeclared dependency. The interfaces the factory names — `psr/http-client` for PSR-18,
+`psr/http-factory` for PSR-17 — are declared for the same reason.
+
+**`guzzlehttp/psr7` is declared with a floor, and the floor is doing work.** The fallback is
+`GuzzleHttp\Psr7\HttpFactory`, which arrived in psr7 **2.0**; `guzzlehttp/guzzle: ^7.8` accepts
+`^1.9.1` as well, so without `guzzlehttp/psr7: ^2.0|^3.0` here a consumer could resolve a tree
+where that class does not exist and the fallback fatals. Guzzle 8 requires `^3.0` and is unaffected.
 
 ### Laravel's logger is wired in on purpose
 
@@ -104,16 +110,18 @@ pass. Keep `phpVersion` in `phpstan.neon` in step with the `php` constraint in `
 `illuminate/*` spans **only currently supported Laravel majors**. Laravel gives 18 months of bug
 fixes and 24 of security fixes, which is narrower than instinct suggests — check before widening.
 
-### `hampel/sparkpost-transport` is at `^0.3.0`, and the caret does not mean what it usually does
+### `hampel/sparkpost-transport` is at `^0.4.0`, and the caret does not mean what it usually does
 
 Below 1.0 Composer treats `^` as `~`: **`^0.1.0` resolves `>=0.1.0 <0.2.0`**, so it excludes 0.2.0
 rather than accepting it. Every 0.x minor of the transport is a breaking boundary as far as this
 constraint is concerned.
 
 The practical consequence is that picking up a new transport feature means **replacing** the
-constraint, not adding to it. It has happened twice: `^0.1.0` became `^0.2.0` for the transmission
-options work, and `^0.2.0` became `^0.3.0` so the bounce address reaches SparkPost. Keep the union
-form only if there is a real reason to support the older line.
+constraint, not adding to it. It has happened three times: `^0.1.0` became `^0.2.0` for the
+transmission options work, `^0.2.0` became `^0.3.0` so the bounce address reaches SparkPost, and
+`^0.3.0` became `^0.4.0` when this package began requiring `hampel/sparkpost` directly — transport
+0.3.0 caps that at `^0.2.0`, so the two constraints are not independent. Keep the union form only
+if there is a real reason to support the older line.
 
 Because the floor and the feature are the same release here, `--prefer-lowest` is the check that
 matters after a bump: it resolves the transport to exactly the floor, so a constraint that is a
@@ -128,27 +136,50 @@ every bump and ask what an application would notice, not only whether the suite 
 validates that against a range baked into the release, so naming a PHP version newer than the tool
 knows about is a configuration error, not a degraded analysis. `max: 80500` needs `^2.1.22`.
 
-### An undeclared dependency is invisible to a normal PHPStan run
+### An undeclared dependency takes two checks, and the obvious one is the weaker
 
-The `dependencies` CI job installs `--no-dev` and analyses `src` alone, with PHPStan pulled in from
-outside the package and `-c .github/phpstan-nodev.neon`. Anything `src` touches that is not in
-`require` then comes back as not-found.
+The `dependencies` CI job runs both, and they fail on different things.
 
-Nothing else catches this. An ordinary run has Testbench installed, which drags in the whole
-framework, so every Illuminate class in existence resolves and a missing `require` looks fine. That
-job is the reason `guzzlehttp/guzzle` is declared here rather than leant on via `laravel/framework`.
+**The dev-free PHPStan run** installs `--no-dev` and analyses `src` alone, with PHPStan pulled in
+from outside the package and `-c .github/phpstan-nodev.neon`. It catches a `src` reference to
+something only a **dev** dependency supplies — a Testbench-only class, a PHPUnit assertion — which
+an ordinary run cannot, because Testbench drags in the whole framework and every Illuminate class
+in existence resolves.
 
-Reproduce it locally in a throwaway clone — it deletes `vendor/` as it goes:
+**It stops there, and the gap is wide.** `--no-dev` removes `require-dev` and nothing else, so
+every transitive package stays installed and every symbol it supplies still resolves. Six packages
+were used in `src` and absent from `require` while that job was green: `guzzlehttp/psr7`,
+`hampel/sparkpost`, `illuminate/contracts`, `psr/http-client`, `psr/http-factory` and `psr/log`.
+Each arrived through something that *was* declared, so nothing was broken — until an upstream
+`composer.json` drops one, and the failure lands in a consumer's application rather than in CI.
+
+**`composer-require-checker` is the check that closes it.** It maps every symbol `src` uses back to
+the package supplying it and fails on anything outside `require`, transitive or not. It reports
+symbols that are *used*: an unused `use` statement is invisible to it, which is Pint's and
+PHPStan's job anyway.
+
+Its whitelist in `.github/composer-require-checker.json` is not a silencer. It holds three
+Illuminate symbols that can never resolve, because `laravel/framework` `replace`s every
+`illuminate/*` component — so Composer installs the framework and there is no `vendor/illuminate/`
+to attribute them to. Verified: a consumer requiring this package alone gets `laravel/framework`,
+not the split packages. A **new** Illuminate symbol showing up there means check its component is
+in `require`, not extend the list.
+
+Reproduce both locally in a throwaway clone — this deletes `vendor/` as it goes:
 
 ```bash
 composer install --no-dev
 mkdir -p /tmp/phpstan && composer -d /tmp/phpstan require phpstan/phpstan
 /tmp/phpstan/vendor/bin/phpstan analyse -c .github/phpstan-nodev.neon \
   --autoload-file=vendor/autoload.php
+
+mkdir -p /tmp/crc && composer -d /tmp/crc require maglnet/composer-require-checker
+/tmp/crc/vendor/bin/composer-require-checker check \
+  --config-file=.github/composer-require-checker.json composer.json
 ```
 
-The separate config is not optional: the package's own `phpstan.neon` points at `tests/` and
-includes larastan, neither of which survives `--no-dev`, so discovering it turns the run into a
+The separate PHPStan config is not optional: the package's own `phpstan.neon` points at `tests/`
+and includes larastan, neither of which survives `--no-dev`, so discovering it turns the run into a
 configuration error while you are trying to read it as a dependency result.
 
 ## Tests
