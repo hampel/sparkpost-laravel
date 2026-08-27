@@ -198,6 +198,28 @@ only configuration visible from outside.
 or PHPUnit is a red suite here, not a note in the output — that is deliberate, so don't reach for
 the failOn* switches to get green.
 
+### `failOnDeprecation` needs two things here, and neither is in `phpunit.xml`
+
+Laravel's `HandleExceptions` bootstrapper calls `set_error_handler()` when the application boots,
+replacing PHPUnit's, and `shouldIgnoreDeprecationErrors()` then discards deprecations outright
+while `runningUnitTests()`. So the flag is inert in **any** Testbench-based package until
+something puts a strict handler back.
+
+`TestCase::setUp()` does that with `withoutDeprecationHandling()`. **It does not cover the service
+provider**: it runs on the line after `parent::setUp()`, and Testbench boots the application
+*inside* that call, so `boot()` has already run and returned under the swallowing handler.
+
+`ProviderRegistrationTest` is what closes it. It extends PHPUnit's own `TestCase`, builds an
+`Illuminate\Foundation\Application` in the test body — constructed directly it runs no
+bootstrappers, so `HandleExceptions` never fires — and boots the provider there. It earns its
+place twice over: it is also the only assertion that registration works on an application that did
+not already have the provider.
+
+Both halves are **verified by probing, not by reading**. `trigger_error(..., E_USER_DEPRECATED)`
+in the factory fails the suite; the same line in `boot()` left it green at exit 0 before that test
+existed. If you change either, probe again — and read the **exit status**, since a run that
+correctly fails this way still prints `OK, but there were issues!` rather than a red failure.
+
 ## Releases
 
 `CHANGELOG.md` is hand-maintained, newest first, and updated in its own commit before tagging. It

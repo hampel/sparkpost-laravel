@@ -17,6 +17,10 @@ Unreleased
 * CI: the declared-dependencies job runs `composer-require-checker` as well as the dev-free
   analysis. That analysis cannot see a transitive dependency - `--no-dev` removes `require-dev`
   and nothing else - which is how all six went undeclared with the job green
+* tests: the service provider is booted against an application built in the test body, so a
+  deprecation raised during registration fails the suite. `withoutDeprecationHandling()` in
+  `setUp()` runs after Testbench has already booted the application, so it does not reach
+  `boot()`
 
 0.1.0 (2026-08-23)
 ------------------
