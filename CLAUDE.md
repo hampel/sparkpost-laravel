@@ -132,6 +132,23 @@ even when nothing in `src/` uses the changed code: sparkpost 0.4.0 reclassified 
 `BounceClassification` cases, which is invisible to this driver and not invisible to an application
 that reads bounce events.
 
+**The lockstep is inherited from 0.x, not chosen, and it ends at 1.0.0 by itself.** `^0.4.0` is
+narrow because a 0.x caret cannot reach the next minor at all, not because anything here wanted a
+tight pin — so there is no relaxation to decide on at 1.0.0, only a misreading to avoid. Above 1.0
+the caret behaves normally and `^1.0` picks up every 1.x minor with no edit in any repository.
+
+The trap is reading today's narrow constraint as house style. **The character that would keep the
+lockstep is `~`, not the patch digit** — verified against `psr/log`, which has 1.0.0 through 1.1.4:
+
+    ^1.0.0  ->  1.1.4      ~1.0.0  ->  1.0.2
+    ^1.0    ->  1.1.4      ~1.0    ->  1.1.4
+
+So `^1.0.0` and `^1.0` are the same constraint and either is fine; `~1.0.0` is the one that would
+pin this package to a single minor line and quietly recreate the four-repository bump treadmill.
+Dropping older minors rather than listing them (`^1.0`, not `^1.0|^2.0`) is a separate and
+continuing decision — CI resolves the newest of a union and exercises only that one, so the rest
+would be an untested promise.
+
 Because the floor and the feature are the same release here, `--prefer-lowest` is the check that
 matters after a bump: it resolves the transport to exactly the floor, so a constraint that is a
 minor too low fails there rather than in an application months later.
