@@ -110,18 +110,27 @@ pass. Keep `phpVersion` in `phpstan.neon` in step with the `php` constraint in `
 `illuminate/*` spans **only currently supported Laravel majors**. Laravel gives 18 months of bug
 fixes and 24 of security fixes, which is narrower than instinct suggests — check before widening.
 
-### `hampel/sparkpost-transport` is at `^0.4.0`, and the caret does not mean what it usually does
+### `hampel/sparkpost-transport` is at `^0.5.0`, and the caret does not mean what it usually does
 
 Below 1.0 Composer treats `^` as `~`: **`^0.1.0` resolves `>=0.1.0 <0.2.0`**, so it excludes 0.2.0
 rather than accepting it. Every 0.x minor of the transport is a breaking boundary as far as this
 constraint is concerned.
 
-The practical consequence is that picking up a new transport feature means **replacing** the
-constraint, not adding to it. It has happened three times: `^0.1.0` became `^0.2.0` for the
-transmission options work, `^0.2.0` became `^0.3.0` so the bounce address reaches SparkPost, and
-`^0.3.0` became `^0.4.0` when this package began requiring `hampel/sparkpost` directly — transport
-0.3.0 caps that at `^0.2.0`, so the two constraints are not independent. Keep the union form only
-if there is a real reason to support the older line.
+The practical consequence is that picking up a new transport release means **replacing** the
+constraint, not adding to it. It has happened four times: `^0.1.0` became `^0.2.0` for the
+transmission options work, `^0.2.0` became `^0.3.0` so the bounce address reaches SparkPost,
+`^0.3.0` became `^0.4.0` when this package began requiring `hampel/sparkpost` directly, and
+`^0.4.0` became `^0.5.0` alongside sparkpost `^0.4.0`. Keep the union form only if there is a real
+reason to support the older line.
+
+**The two hampel constraints are not independent, and must move together.** Each transport release
+caps `hampel/sparkpost`: transport 0.3.0 caps it at `^0.2.0`, 0.4.0 at `^0.3.0`, 0.5.0 at `^0.4.0`.
+Bumping either one alone is unsatisfiable — Composer reports a conflict rather than silently
+resolving something older — so a bump is always a two-line edit. Since this package requires
+`hampel/sparkpost` directly, a breaking change there reaches an application through this package
+even when nothing in `src/` uses the changed code: sparkpost 0.4.0 reclassified two
+`BounceClassification` cases, which is invisible to this driver and not invisible to an application
+that reads bounce events.
 
 Because the floor and the feature are the same release here, `--prefer-lowest` is the check that
 matters after a bump: it resolves the transport to exactly the floor, so a constraint that is a
