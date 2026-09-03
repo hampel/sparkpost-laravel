@@ -1,17 +1,16 @@
 CHANGELOG
 =========
 
-Unreleased
-----------
+0.3.0 (2026-09-04)
+------------------
 
 * requires hampel/sparkpost-transport `^0.5.0` and hampel/sparkpost `^0.4.0`; the older 0.x
   minors of both are no longer supported
-* nothing this package sends changes. Transport 0.5.0 is a constraint bump with no `src/`
-  change, and the driver does not use the enum sparkpost 0.4.0 alters
-* sparkpost 0.4.0 is breaking for an application that reads bounce classifications itself:
-  `BounceClassification` gains an `Informational` case, and codes 60 (AutoReply) and 80
-  (Subscribe) move onto it from `Soft` and `Admin`. An exhaustive `match` over that enum
-  throws `UnhandledMatchError`
+* nothing this package sends changes
+* sparkpost 0.4.0 changes bounce classification: `BounceClassification` gains an
+  `Informational` case, and codes 60 (AutoReply) and 80 (Subscribe) move onto it from `Soft`
+  and `Admin`. An exhaustive `match` over that enum throws `UnhandledMatchError`. This driver
+  does not read the enum; an application that reads bounce events does
 
 0.2.0 (2026-08-27)
 ------------------
