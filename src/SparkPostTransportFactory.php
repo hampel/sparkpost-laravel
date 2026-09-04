@@ -110,8 +110,9 @@ final class SparkPostTransportFactory
      */
     private function apiKey(array $config): string
     {
-        // "secret" is what Laravel's own service blocks call this, and what the driver this
-        // replaces used; "key" is accepted because it is the obvious guess.
+        // "secret" is the key Laravel's own service blocks use, so an application that already
+        // has a services.sparkpost block needs no change to it; "key" is accepted because it is
+        // the obvious guess.
         $key = $this->stringOrNull($config['secret'] ?? null) ?? $this->stringOrNull($config['key'] ?? null);
 
         if ($key === null || trim($key) === '') {

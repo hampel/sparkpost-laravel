@@ -242,7 +242,7 @@ correctly fails this way still prints `OK, but there were issues!` rather than a
 `CHANGELOG.md` is hand-maintained, newest first, and updated in its own commit before tagging. It
 uses **setext headings** — a title underlined with `=`, then `x.y.z (YYYY-MM-DD)` underlined with
 `-`, with `*` bullets under each. Work in progress accumulates under `Unreleased`, which is renamed
-at release. Simon does his own pushes and tagging.
+at release.
 
 **An entry for a change in what SparkPost receives is written for the application, not for this
 package.** Most entries describe an API this package offers, and its reader is someone choosing
