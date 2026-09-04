@@ -110,53 +110,42 @@ pass. Keep `phpVersion` in `phpstan.neon` in step with the `php` constraint in `
 `illuminate/*` spans **only currently supported Laravel majors**. Laravel gives 18 months of bug
 fixes and 24 of security fixes, which is narrower than instinct suggests — check before widening.
 
-### `hampel/sparkpost-transport` is at `^0.5.0`, and the caret does not mean what it usually does
+### The hampel constraints are `^1.0`, and the 0.x lockstep is over
 
-Below 1.0 Composer treats `^` as `~`: **`^0.1.0` resolves `>=0.1.0 <0.2.0`**, so it excludes 0.2.0
-rather than accepting it. Every 0.x minor of the transport is a breaking boundary as far as this
-constraint is concerned.
+Both upstream packages reached 1.0.0 on 4 September 2026, so this package requires
+`hampel/sparkpost: ^1.0` and `hampel/sparkpost-transport: ^1.0`. **`^1.0` is `>=1.0.0 <2.0.0`**,
+so a new minor of either arrives with no edit here and nothing needs coordinating any more.
 
-The practical consequence is that picking up a new transport release means **replacing** the
-constraint, not adding to it. It has happened four times: `^0.1.0` became `^0.2.0` for the
-transmission options work, `^0.2.0` became `^0.3.0` so the bounce address reaches SparkPost,
-`^0.3.0` became `^0.4.0` when this package began requiring `hampel/sparkpost` directly, and
-`^0.4.0` became `^0.5.0` alongside sparkpost `^0.4.0`. Keep the union form only if there is a real
-reason to support the older line.
+That is worth saying plainly because the history says otherwise and the history is still visible
+in `CHANGELOG.md`. Below 1.0 Composer treats `^` as `~`: **`^0.1.0` resolves `>=0.1.0 <0.2.0`**,
+excluding 0.2.0 rather than accepting it. Every 0.x minor was a breaking boundary, each transport
+release capped `hampel/sparkpost` exactly one minor wide, and the pair had to be **replaced**
+together on every release — five times between 0.1.0 and 1.0.0. **None of that was chosen, and
+none of it survives 1.0.0.**
 
-**The two hampel constraints are not independent, and must move together.** Each transport release
-caps `hampel/sparkpost`: transport 0.3.0 caps it at `^0.2.0`, 0.4.0 at `^0.3.0`, 0.5.0 at `^0.4.0`.
-Bumping either one alone is unsatisfiable — Composer reports a conflict rather than silently
-resolving something older — so a bump is always a two-line edit. Since this package requires
-`hampel/sparkpost` directly, a breaking change there reaches an application through this package
-even when nothing in `src/` uses the changed code: sparkpost 0.4.0 reclassified two
-`BounceClassification` cases, which is invisible to this driver and not invisible to an application
-that reads bounce events.
-
-**The lockstep is inherited from 0.x, not chosen, and it ends at 1.0.0 by itself.** `^0.4.0` is
-narrow because a 0.x caret cannot reach the next minor at all, not because anything here wanted a
-tight pin — so there is no relaxation to decide on at 1.0.0, only a misreading to avoid. Above 1.0
-the caret behaves normally and `^1.0` picks up every 1.x minor with no edit in any repository.
-
-The trap is reading today's narrow constraint as house style. **The character that would keep the
-lockstep is `~`, not the patch digit** — verified against `psr/log`, which has 1.0.0 through 1.1.4:
+**So do not read those old narrow constraints as house style.** The one way to bring the treadmill
+back is to write `~` where `^` belongs, and the two look interchangeable in a way `^0.4.0` and
+`^1.0` do not. Verified against `psr/log`, which has 1.0.0 through 1.1.4:
 
     ^1.0.0  ->  1.1.4      ~1.0.0  ->  1.0.2
     ^1.0    ->  1.1.4      ~1.0    ->  1.1.4
 
-So `^1.0.0` and `^1.0` are the same constraint and either is fine; `~1.0.0` is the one that would
-pin this package to a single minor line and quietly recreate the four-repository bump treadmill.
-Dropping older minors rather than listing them (`^1.0`, not `^1.0|^2.0`) is a separate and
-continuing decision — CI resolves the newest of a union and exercises only that one, so the rest
-would be an untested promise.
+Above 1.0 `^1.0.0` and `^1.0` are the same constraint and either is fine; `~1.0.0` pins to a single
+minor line. Dropping older majors rather than listing them (`^1.0`, not `^1.0|^2.0`) stays a live
+decision — CI resolves the newest of a union and exercises only that one, so the rest would be an
+untested promise.
 
-Because the floor and the feature are the same release here, `--prefer-lowest` is the check that
-matters after a bump: it resolves the transport to exactly the floor, so a constraint that is a
-minor too low fails there rather than in an application months later.
+`--prefer-lowest` is still the check that matters after any constraint change: it resolves both
+packages to exactly the declared floor, so a floor a release too low fails there rather than in an
+application months later.
 
-**A transport release can change what this package sends without a line changing here.** 0.3.0
-began sending the envelope sender as the transmission `return_path`, which turned Laravel's
-existing `mail.return_path` setting from inert into effective. Read the transport's CHANGELOG on
-every bump and ask what an application would notice, not only whether the suite still passes.
+**A transport release can still change what this package sends without a line changing here**, and
+this is the one respect in which 1.0.0 makes things *worse*. 0.3.0 began sending the envelope
+sender as the transmission `return_path`, turning Laravel's existing `mail.return_path` setting
+from inert into effective. Under `^1.0` such a release arrives with **no constraint bump to prompt
+a read** — the 0.x lockstep forced someone to look at the upstream CHANGELOG on every single
+release, and that accidental tripwire is now gone. Read it on upgrade instead, and ask what an
+application would notice rather than only whether the suite still passes.
 
 **`phpstan/phpstan` must be a version that accepts the `phpVersion.max` in `phpstan.neon`.** It
 validates that against a range baked into the release, so naming a PHP version newer than the tool
