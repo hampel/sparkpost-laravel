@@ -242,6 +242,17 @@ uses **setext headings** — a title underlined with `=`, then `x.y.z (YYYY-MM-D
 `-`, with `*` bullets under each. Work in progress accumulates under `Unreleased`, which is renamed
 at release. Simon does his own pushes and tagging.
 
+**An entry for a change in what SparkPost receives is written for the application, not for this
+package.** Most entries describe an API this package offers, and its reader is someone choosing
+to use it. A change to the transmission payload has a different reader: someone who changed
+nothing, upgraded, and is not reading carefully. Say what an application will now send that it
+did not before — not only what this package now does.
+
+The precedent is upstream. Transport 0.3.0's entry named `Email::returnPath()` and
+`Email::sender()` accurately, and still did not convey that Laravel's existing `mail.return_path`
+had gone from inert to effective in applications where nobody touched a line. The entry was not
+thin; it was aimed at the wrong reader, which from the author's side looks the same.
+
 **A new dev-only file at the repo root needs an `export-ignore` line in `.gitattributes`**, which is
 what keeps it out of the Packagist dist archive. `CLAUDE.md` is on that list already.
 
