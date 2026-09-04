@@ -1,6 +1,17 @@
 CHANGELOG
 =========
 
+1.0.0 (2026-09-04)
+------------------
+
+* the API this package exposes is now stable, and versioned under semver rather than 0.x. From
+  here a breaking change means 2.0.0
+* requires hampel/sparkpost `^1.0` and hampel/sparkpost-transport `^1.0`; the 0.x lines of both
+  are no longer supported
+* no functional change. `src/` is unchanged from 0.3.0, and nothing this package sends changes
+* the constraints on both hampel packages are no longer one minor wide. `^1.0` is
+  `>=1.0.0 <2.0.0`, so an upstream minor no longer requires a release here
+
 0.3.0 (2026-09-04)
 ------------------
 
