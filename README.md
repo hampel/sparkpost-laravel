@@ -67,6 +67,35 @@ otherwise every link in every email is rewritten through SparkPost's domain. Lik
 non-transactional suppression list, so someone who unsubscribed from a newsletter stops
 receiving password resets.
 
+Nothing here needs to be hard-coded — the three that most often differ between deployments
+can come from the environment:
+
+```php
+'sparkpost' => [
+    'secret' => env('SPARKPOST_SECRET'),
+    'region' => env('SPARKPOST_REGION'),
+    'options' => [
+        'open_tracking' => env('SPARKPOST_OPEN_TRACKING', false),
+        'click_tracking' => env('SPARKPOST_CLICK_TRACKING', false),
+        'transactional' => env('SPARKPOST_TRANSACTIONAL', true),
+    ],
+],
+```
+
+```dotenv
+SPARKPOST_OPEN_TRACKING=false
+SPARKPOST_CLICK_TRACKING=false
+SPARKPOST_TRANSACTIONAL=true
+```
+
+**Give `env()` a default.** Options are sent as written, so `env('SPARKPOST_OPEN_TRACKING')`
+with nothing set for it puts `"open_tracking": null` in the transmission rather than leaving
+the key out — which is not the same thing, for the reason above. The default is what a
+deployment that never sets the variable gets, and that is the value worth pinning.
+
+Write `true` and `false`, not `1` and `0`. Laravel casts those two words to booleans; anything
+else stays the string it was, and `"open_tracking": "0"` is not `false`.
+
 Options can go on the mailer instead, which is how two mailers send with different
 tracking against one account:
 
