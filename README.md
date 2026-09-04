@@ -169,12 +169,15 @@ with the From. Every fallback row authenticates fine and aligns with nothing, le
 resting on DKIM alone. Only the last row aligns — and what that buys is a second independent
 route to a DMARC pass, so a DKIM problem becomes a degradation rather than an outage.
 
-**This is not theoretical.** On a live account, a test message sent with a bogus return path was
-accepted by SparkPost and did not arrive; the same message with a configured bounce domain arrived,
-minutes apart. The reading the operator reached at the time is the one the mechanism supports — the
-value was discarded, the fallback aligned with nothing, the SPF leg of DMARC failed, and DKIM
-alignment was not carrying the message on its own, so a DMARC-enforcing receiver refused it.
-SparkPost had done nothing wrong: it sent the message, and the recipient declined it.
+**This is not theoretical, though the evidence is one uncontrolled send.** On a live account a
+message with a bogus return path was accepted by SparkPost and had not arrived when the sender
+checked — whether it was never sent, or sent and blocked in transit, was never established. The
+same message with a configured bounce domain arrived, minutes apart on the same account.
+
+The mechanism fits: the bogus value was discarded, the fallback aligned with nothing, the SPF leg
+of DMARC failed, and DKIM alignment was evidently not carrying that mail on its own, so a
+DMARC-enforcing receiver had grounds to refuse it. On that reading SparkPost did nothing wrong —
+it sent the message and the recipient declined it.
 
 So **the fallback rows are conditionally safe rather than safe.** They rest entirely on DKIM
 alignment holding. Setting an aligned bounce domain is the difference between being one failure
