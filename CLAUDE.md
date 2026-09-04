@@ -141,8 +141,10 @@ application months later.
 
 **A transport release can still change what this package sends without a line changing here**, and
 this is the one respect in which 1.0.0 makes things *worse*. 0.3.0 began sending the envelope
-sender as the transmission `return_path`, turning Laravel's existing `mail.return_path` setting
-from inert into effective. Under `^1.0` such a release arrives with **no constraint bump to prompt
+sender as the transmission `return_path`, so Laravel's existing `mail.return_path` started
+reaching SparkPost where it had previously gone nowhere. **What it then did there depended on the
+account** — a domain not configured as a bounce domain is discarded silently — so the effect was
+not determinable from either package's source. Under `^1.0` such a release arrives with **no constraint bump to prompt
 a read** — the 0.x lockstep forced someone to look at the upstream CHANGELOG on every single
 release, and that accidental tripwire is now gone. Read it on upgrade instead, and ask what an
 application would notice rather than only whether the suite still passes.
@@ -250,7 +252,7 @@ did not before — not only what this package now does.
 
 The precedent is upstream. Transport 0.3.0's entry named `Email::returnPath()` and
 `Email::sender()` accurately, and still did not convey that Laravel's existing `mail.return_path`
-had gone from inert to effective in applications where nobody touched a line. The entry was not
+had started reaching SparkPost in applications where nobody touched a line. The entry was not
 thin; it was aimed at the wrong reader, which from the author's side looks the same.
 
 **A new dev-only file at the repo root needs an `export-ignore` line in `.gitattributes`**, which is
