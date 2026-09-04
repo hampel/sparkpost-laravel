@@ -131,8 +131,8 @@ Symfony falls back to the From when nothing is set.
 
 ### What SparkPost does with it
 
-Measured against a live account, because this is account behaviour rather than anything the
-package controls:
+What ends up in the `Return-Path` header is decided by the SparkPost account, not by this
+package or by Laravel:
 
 | `mail.return_path` | bounce domain on the account | resulting `Return-Path` |
 |---|---|---|
@@ -169,19 +169,10 @@ with the From. Every fallback row authenticates fine and aligns with nothing, le
 resting on DKIM alone. Only the last row aligns — and what that buys is a second independent
 route to a DMARC pass, so a DKIM problem becomes a degradation rather than an outage.
 
-**This is not theoretical, though the evidence is one uncontrolled send.** On a live account a
-message with a bogus return path was accepted by SparkPost and had not arrived when the sender
-checked — whether it was never sent, or sent and blocked in transit, was never established. The
-same message with a configured bounce domain arrived, minutes apart on the same account.
-
-The mechanism fits: the bogus value was discarded, the fallback aligned with nothing, the SPF leg
-of DMARC failed, and DKIM alignment was evidently not carrying that mail on its own, so a
-DMARC-enforcing receiver had grounds to refuse it. On that reading SparkPost did nothing wrong —
-it sent the message and the recipient declined it.
-
-So **the fallback rows are conditionally safe rather than safe.** They rest entirely on DKIM
-alignment holding. Setting an aligned bounce domain is the difference between being one failure
-away from a DMARC rejection and being two.
+So **the fallback rows are conditionally safe rather than safe.** A fallback `Return-Path` fails
+the SPF leg of DMARC by construction, so delivery to a receiver enforcing a strict policy rests
+entirely on DKIM alignment holding. Setting an aligned bounce domain is the difference between
+being one failure away from a DMARC rejection and being two.
 
 **So set it when you have a bounce domain that aligns with your From address.** Leave it unset
 otherwise — a value the account does not recognise buys nothing.

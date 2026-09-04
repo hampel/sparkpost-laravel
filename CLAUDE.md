@@ -253,8 +253,7 @@ did not before — not only what this package now does.
 **And stop there, deliberately.** There are three layers, and a CHANGELOG can honestly reach two:
 what this package does, what an application now sends, and what SparkPost then *does with it*.
 The third is not ours to claim — it turns on account configuration that no vendor tree can
-observe, which is precisely how the bounce-domain claim in `README.md` came to be wrong for a
-day. Describe the payload; leave the consequence to the account receiving it.
+observe. Describe the payload; leave the consequence to the account receiving it.
 
 The precedent is upstream. Transport 0.3.0's entry named `Email::returnPath()` and
 `Email::sender()` accurately, and still did not convey that Laravel's existing `mail.return_path`
