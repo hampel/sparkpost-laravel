@@ -115,8 +115,16 @@ sets for itself wins over both.
 
 ## The bounce address
 
-`return_path` is Laravel's own setting, not one this package adds. Set it in
-`config/mail.php` and it applies to every message the application sends:
+`return_path` is Laravel's own setting, not one this package adds — and **most applications
+should leave it unset.** Sending nothing means SparkPost uses the account's own bounce
+domain, which is where its bounce processing expects mail. That is the working default, not
+a gap.
+
+The intuition that says otherwise comes from SMTP, where the envelope sender does default to
+the From address. This driver never opens an SMTP connection, so that reasoning does not
+carry over: an omitted `return_path` here means SparkPost's bounce domain, not the From.
+
+Set it only when you have a **verified custom bounce domain** on the account:
 
 ```php
 'return_path' => [
@@ -128,13 +136,20 @@ Laravel applies it in `Mailer::createMessage()`, so it covers Mailables, `Mail::
 notifications and queued mail alike. Setting `return_path` on a mailer in `mail.mailers`
 overrides the global value for that mailer.
 
-Two things to know:
+An empty value is inert — Laravel applies it only when non-empty — so the block can sit in
+`config/mail.php` with nothing set, and it is worth writing down that way. The key is absent
+from Laravel's skeleton `config/mail.php`, so an application acquires it only by someone
+deciding to add it, and its silence otherwise says nothing: a considered decision and a
+setting nobody has heard of look identical.
+
+Two things to know when you do set it:
 
 - **It is sent only when it differs from the From address.** Symfony falls back to the From
   when no return path is set, and sending that as the bounce address would move bounces off
   SparkPost's own bounce domain.
-- **The domain must be a verified bounce domain on the SparkPost account.** SparkPost accepts
-  a transmission naming an unverified one and does not deliver it.
+- **The domain must be verified on the SparkPost account.** SparkPost accepts a transmission
+  naming an unverified one, returns `200`, and then does not deliver it. It is the From that
+  SparkPost polices at send time, with `HTTP 400 "Unconfigured Sending Domain"`.
 
 Sending every message from one address on one domain, and using `Reply-To` where replies
 belong elsewhere, keeps SPF and DKIM aligned with that domain.
