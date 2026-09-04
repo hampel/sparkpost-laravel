@@ -115,16 +115,7 @@ sets for itself wins over both.
 
 ## The bounce address
 
-`return_path` is Laravel's own setting, not one this package adds — and **most applications
-should leave it unset.** Sending nothing means SparkPost uses the account's own bounce
-domain, which is where its bounce processing expects mail. That is the working default, not
-a gap.
-
-The intuition that says otherwise comes from SMTP, where the envelope sender does default to
-the From address. This driver never opens an SMTP connection, so that reasoning does not
-carry over: an omitted `return_path` here means SparkPost's bounce domain, not the From.
-
-Set it only when you have a **verified custom bounce domain** on the account:
+`return_path` is Laravel's own setting, not one this package adds:
 
 ```php
 'return_path' => [
@@ -134,25 +125,57 @@ Set it only when you have a **verified custom bounce domain** on the account:
 
 Laravel applies it in `Mailer::createMessage()`, so it covers Mailables, `Mail::raw()`,
 notifications and queued mail alike. Setting `return_path` on a mailer in `mail.mailers`
-overrides the global value for that mailer.
+overrides the global value for that mailer. An empty value is inert — Laravel applies it only
+when non-empty — and the transport sends it only when it differs from the From address, since
+Symfony falls back to the From when nothing is set.
 
-An empty value is inert — Laravel applies it only when non-empty — so the block can sit in
-`config/mail.php` with nothing set, and it is worth writing down that way. The key is absent
-from Laravel's skeleton `config/mail.php`, so an application acquires it only by someone
-deciding to add it, and its silence otherwise says nothing: a considered decision and a
-setting nobody has heard of look identical.
+### What SparkPost does with it
 
-Two things to know when you do set it:
+Measured against a live account, because this is account behaviour rather than anything the
+package controls:
 
-- **It is sent only when it differs from the From address.** Symfony falls back to the From
-  when no return path is set, and sending that as the bounce address would move bounces off
-  SparkPost's own bounce domain.
-- **The domain must be verified on the SparkPost account.** SparkPost accepts a transmission
-  naming an unverified one, returns `200`, and then does not deliver it. It is the From that
-  SparkPost polices at send time, with `HTTP 400 "Unconfigured Sending Domain"`.
+| `mail.return_path` | bounce domain on the account | resulting `Return-Path` |
+|---|---|---|
+| unset | none | `<id>@sparkpostmail.com` |
+| `anything@bounce.example.com` | none | `<id>@sparkpostmail.com` |
+| unset | default `default.example.com` | `<id>@default.example.com` |
+| `anything@bounce.example.com` | default `default.example.com` | `<id>@default.example.com` |
+| `anything@bounce.example.com` | `bounce.example.com` verified | `<id>@bounce.example.com` |
 
-Sending every message from one address on one domain, and using `Reply-To` where replies
-belong elsewhere, keeps SPF and DKIM aligned with that domain.
+Three things follow, and none of them is guessable:
+
+- **A value naming a domain the account has not been told about is discarded, and the mail is
+  delivered anyway.** It is inert, not destructive: the setting looks applied and does nothing.
+- **Only the domain survives.** `anything@` becomes `<id>@` in every row — SparkPost replaces
+  the local part with an identifier of its own. So the check on a delivered message is *is the
+  domain mine?*, never *does the header match what I set?*
+- **The fallback is two steps**: the account's — or the subaccount's, for a subaccount API key —
+  default bounce domain if one is configured, and `sparkpostmail.com` if not.
+
+### Why you would set it
+
+Not to collect bounces. SparkPost processes those correctly in every row above, including the
+ones where your value was thrown away. The reason is **DMARC**.
+
+SPF authenticates the Return-Path domain, and DMARC needs an authenticated domain that *aligns*
+with the From. Every fallback row authenticates fine and aligns with nothing, leaving DMARC
+resting on DKIM alone. Only the last row aligns — and what that buys is a second independent
+route to a DMARC pass, so a DKIM problem becomes a degradation rather than an outage.
+
+**So set it when you have a bounce domain that aligns with your From address.** Leave it unset
+otherwise, where it would be inert in any case.
+
+**Alignment is a relationship between the two domains, not a property of either.** Relaxed
+alignment needs the same base domain, strict needs the identical one.
+`bounces@bounce.example.net` against `webmaster@example.com` is configured, valid, delivered —
+and useless: the SPF leg of DMARC fails and nothing has been bought. `MAIL_RETURN_PATH` and
+`MAIL_FROM_ADDRESS` are chosen together, and changing either alone gives up the second path
+silently. Sending every message from one address on one domain — and using `Reply-To` where
+replies belong elsewhere — is what keeps that pair easy to hold together.
+
+Laravel does not ship `return_path` in its skeleton `config/mail.php`, so an application only
+acquires the key by someone deciding to add it. Writing it down — even empty — is what makes
+its state a decision rather than a thing nobody has heard of.
 
 ## What you get from the transport
 
