@@ -142,15 +142,22 @@ package controls:
 | `anything@bounce.example.com` | default `default.example.com` | `<id>@default.example.com` |
 | `anything@bounce.example.com` | `bounce.example.com` verified | `<id>@bounce.example.com` |
 
-Three things follow, and none of them is guessable:
+Four things follow, and none of them is guessable:
 
-- **A value naming a domain the account has not been told about is discarded, and the mail is
-  delivered anyway.** It is inert, not destructive: the setting looks applied and does nothing.
+- **A value naming a domain the account has not been told about is discarded.** SparkPost accepts
+  the transmission and sends the message, falling back exactly as though you had set nothing —
+  rows 1 and 2 produce the same header. So a wrong value is not rejected and costs nothing *at
+  SparkPost*. It is **not harmless**, though, and the next section is why: it leaves you unaligned
+  while looking configured.
 - **Only the domain survives.** `anything@` becomes `<id>@` in every row — SparkPost replaces
   the local part with an identifier of its own. So the check on a delivered message is *is the
   domain mine?*, never *does the header match what I set?*
 - **The fallback is two steps**: the account's — or the subaccount's, for a subaccount API key —
   default bounce domain if one is configured, and `sparkpostmail.com` if not.
+- **The From address is policed and the return path is not**, which is the pair most easily
+  confused. A From on a domain that is not a configured *sending* domain is rejected outright with
+  `HTTP 400 "Unconfigured Sending Domain"`. A return path on a domain the account does not know is
+  accepted and quietly dropped.
 
 ### Why you would set it
 
@@ -162,8 +169,19 @@ with the From. Every fallback row authenticates fine and aligns with nothing, le
 resting on DKIM alone. Only the last row aligns — and what that buys is a second independent
 route to a DMARC pass, so a DKIM problem becomes a degradation rather than an outage.
 
+**This is not theoretical.** On a live account, a test message sent with a bogus return path was
+accepted by SparkPost and did not arrive; the same message with a configured bounce domain arrived,
+minutes apart. The reading the operator reached at the time is the one the mechanism supports — the
+value was discarded, the fallback aligned with nothing, the SPF leg of DMARC failed, and DKIM
+alignment was not carrying the message on its own, so a DMARC-enforcing receiver refused it.
+SparkPost had done nothing wrong: it sent the message, and the recipient declined it.
+
+So **the fallback rows are conditionally safe rather than safe.** They rest entirely on DKIM
+alignment holding. Setting an aligned bounce domain is the difference between being one failure
+away from a DMARC rejection and being two.
+
 **So set it when you have a bounce domain that aligns with your From address.** Leave it unset
-otherwise, where it would be inert in any case.
+otherwise — a value the account does not recognise buys nothing.
 
 **Alignment is a relationship between the two domains, not a property of either.** Relaxed
 alignment needs the same base domain, strict needs the identical one.
