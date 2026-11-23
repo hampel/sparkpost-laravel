@@ -220,7 +220,9 @@ package constructs a Guzzle client itself.
 
 ## Laravel versions
 
-`^12.0|^13.0`, and the suite runs against both under Orchestra Testbench.
+`^12.71|^13.40`, and the suite runs against both under Orchestra Testbench. Each floor is the
+lowest release of that major that Composer will install: earlier ones are affected by published
+security advisories, which Composer 2.9 and later refuse by default.
 
 ## Licence
 

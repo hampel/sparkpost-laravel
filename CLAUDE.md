@@ -27,9 +27,9 @@ composer lint / format / analyse / test         # the same steps individually
 vendor/bin/phpunit --filter test_name           # one test (methods are snake_case)
 
 # the corners CI covers
-composer update --with="illuminate/support:^12.0" --with="illuminate/mail:^12.0" \
+composer update --with="illuminate/support:^12.71" --with="illuminate/mail:^12.71" \
   --with="orchestra/testbench:^10.0" --prefer-lowest
-composer update --with="illuminate/support:^13.0" --with="illuminate/mail:^13.0" \
+composer update --with="illuminate/support:^13.40" --with="illuminate/mail:^13.40" \
   --with="orchestra/testbench:^11.0"
 ```
 
@@ -109,6 +109,28 @@ pass. Keep `phpVersion` in `phpstan.neon` in step with the `php` constraint in `
 
 `illuminate/*` spans **only currently supported Laravel majors**. Laravel gives 18 months of bug
 fixes and 24 of security fixes, which is narrower than instinct suggests — check before widening.
+
+**Within each major, the floor is the lowest release Composer will install: `^12.71|^13.40`.**
+Composer 2.9 and later refuse a release affected by a published security advisory, by default. On
+2026-11-24 nothing below 12.71.0 or 13.40.0 resolved, so `^12.0` declared every release from 12.0
+to 12.70 while nobody could install one, and the `--prefer-lowest` job was quietly testing 12.71.0
+under a `^12.0` label.
+
+When a new advisory covers the floor, the `--prefer-lowest` job stops resolving. Re-measure on
+PHP 8.3, with a lock file present, pinning `laravel/framework` rather than `illuminate/*`
+(Testbench installs the framework, which `replace`s every component):
+
+```bash
+composer update "laravel/framework:12.71.0" "orchestra/testbench:^10.0" -W --dry-run
+composer update "laravel/framework:13.40.0" -W --dry-run
+```
+
+**Read the message, not the exit code.** Only a refusal naming a security advisory answers the
+question. Without a lock file Composer refuses any partial update; without
+`orchestra/testbench:^10.0` a lock holding Testbench 11 refuses a 12.x request on its own
+constraint; and asking for `illuminate/support` instead of the framework fails on a lock
+conflict. All exit 2 or 3 and none mention an advisory. Raise the floor to what resolves, then run
+the suite and PHPStan there.
 
 ### The hampel constraints are `^1.0`, and the 0.x lockstep is over
 

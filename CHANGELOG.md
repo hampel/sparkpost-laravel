@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+Unreleased
+----------
+
+* requires `illuminate/*` `^12.71|^13.40`, up from `^12.0|^13.0`. Composer 2.9 and later already
+  refuse every release below those floors because of published security advisories, so no
+  application that can install this package today loses the ability to
+
 1.0.0 (2026-09-04)
 ------------------
 
