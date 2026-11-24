@@ -7,6 +7,8 @@ Unreleased
 * requires `illuminate/*` `^12.71|^13.40`, up from `^12.0|^13.0`. Composer 2.9 and later already
   refuse every release below those floors because of published security advisories, so no
   application that can install this package today loses the ability to
+* requires `guzzlehttp/guzzle` `^7.15.2|^8.1`, up from `^7.8|^8.0`, and `guzzlehttp/psr7`
+  `^2.13|^3.1`, up from `^2.0|^3.0`, for the same reason: nothing below those floors installs
 
 1.0.0 (2026-09-04)
 ------------------

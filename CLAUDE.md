@@ -91,10 +91,20 @@ on it, but this package requires `illuminate/*` rather than the framework, so re
 be an undeclared dependency. The interfaces the factory names — `psr/http-client` for PSR-18,
 `psr/http-factory` for PSR-17 — are declared for the same reason.
 
-**`guzzlehttp/psr7` is declared with a floor, and the floor is doing work.** The fallback is
-`GuzzleHttp\Psr7\HttpFactory`, which arrived in psr7 **2.0**; `guzzlehttp/guzzle: ^7.8` accepts
-`^1.9.1` as well, so without `guzzlehttp/psr7: ^2.0|^3.0` here a consumer could resolve a tree
-where that class does not exist and the fallback fatals. Guzzle 8 requires `^3.0` and is unaffected.
+**`guzzlehttp/psr7` is declared in its own right, not left to Guzzle.** The fallback is
+`GuzzleHttp\Psr7\HttpFactory`, which arrived in psr7 **2.0**, and early Guzzle 7 releases accepted
+`^1.9.1` too — so when Guzzle's floor was `^7.8`, this declaration was what stopped a tree in
+which that class does not exist. Guzzle's floor now forces psr7 `^2.13` on its own, but `src`
+still names the class, so the package stays in `require`.
+
+**Both floors are the lowest releases Composer will install: `guzzlehttp/guzzle: ^7.15.2|^8.1`,
+`guzzlehttp/psr7: ^2.13|^3.1`.** The same advisory block as the Laravel floors (see *Version
+support*), measured on 2026-11-24: Guzzle 7.15.1 and 8.0.0 and psr7 2.12.0 are refused for an
+advisory. psr7 3.0.0 is not refused for one, but nothing can install it — Guzzle 8.1.0 requires
+psr7 `^3.1`, and the only Guzzle 8 that accepts 3.0.0 is the blocked 8.0.0. **Guzzle 8 needs
+Laravel 13**, since Laravel 12 requires Guzzle `^7.8.2`, so measure those arms on a Laravel 13
+lock, and ask for psr7 3.x together with `guzzlehttp/guzzle:^8.1`: `-W` does not unlock Guzzle,
+because Guzzle depends on psr7 and not the other way round.
 
 ### Laravel's logger is wired in on purpose
 
