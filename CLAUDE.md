@@ -208,11 +208,16 @@ symbols that are *used*: an unused `use` statement is invisible to it, which is 
 PHPStan's job anyway.
 
 Its whitelist in `.github/composer-require-checker.json` is not a silencer. It holds three
-Illuminate symbols that can never resolve, because `laravel/framework` `replace`s every
-`illuminate/*` component — so Composer installs the framework and there is no `vendor/illuminate/`
-to attribute them to. Verified: a consumer requiring this package alone gets `laravel/framework`,
-not the split packages. A **new** Illuminate symbol showing up there means check its component is
-in `require`, not extend the list.
+Illuminate symbols that cannot be attributed **in this package's own install**, because
+`laravel/framework` `replace`s every `illuminate/*` component. `composer install --no-dev` with no
+lock still resolves `require-dev`, so Testbench pulls in the framework, the framework satisfies
+every `illuminate/*` requirement, and there is no `vendor/illuminate/` to map the symbols to —
+even though Testbench itself is not installed. **A consumer is different**: requiring this package
+alone, without Testbench, installs the split `illuminate/*` packages and no framework (verified
+2026-11-24 with 1.0.1, which pulled `illuminate/support`, `mail`, `contracts` and their own
+dependencies at 13.43.0). So the whitelist is an artefact of the CI install, not of what
+consumers get. A **new** Illuminate symbol showing up there means check its component is in
+`require`, not extend the list.
 
 Reproduce both locally in a throwaway clone — this deletes `vendor/` as it goes:
 
